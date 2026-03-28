@@ -1,0 +1,158 @@
+/* Story */
+.about-story {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+
+.about-story__content h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.about-story__content h2 span {
+  color: var(--primary);
+}
+
+.about-story__content p {
+  color: var(--text-secondary);
+  line-height: 1.8;
+  margin-bottom: 16px;
+  font-size: 0.98rem;
+}
+
+.about-story__content strong {
+  color: var(--primary);
+}
+
+.about-visual-card {
+  text-align: center;
+  padding: 60px 40px;
+}
+
+.about-visual-card__icon {
+  font-size: 3rem;
+  color: var(--primary);
+  margin-bottom: 20px;
+}
+
+.about-visual-card h3 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.about-visual-card p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+/* Mission & Vision */
+.mv-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+}
+
+.mv-card {
+  text-align: center;
+  padding: 48px 36px;
+}
+
+.mv-card__icon {
+  font-size: 2rem;
+  color: var(--primary);
+  margin-bottom: 20px;
+}
+
+.mv-card h3 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.mv-card p {
+  color: var(--text-secondary);
+  line-height: 1.7;
+  font-size: 0.95rem;
+}
+
+/* Stats */
+.about-stats {
+  padding: 80px 0;
+  background: var(--bg-glass);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.about-stats__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  text-align: center;
+}
+
+.about-stat strong {
+  display: block;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 6px;
+}
+
+.about-stat span {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+/* Values */
+.values-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.value-card {
+  text-align: center;
+  padding: 40px 28px;
+}
+
+.value-card__icon {
+  font-size: 1.8rem;
+  color: var(--primary);
+  margin-bottom: 16px;
+}
+
+.value-card h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.value-card p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .about-story {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .mv-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .about-stats__grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 32px;
+  }
+
+  .values-grid {
+    grid-template-columns: 1fr;
+  }
+}
