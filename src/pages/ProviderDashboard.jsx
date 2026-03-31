@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
 import {
   FaCalendarAlt, FaClock, FaMapMarkerAlt, FaSignOutAlt,
-  FaUser, FaPhone, FaEnvelope, FaCheckCircle, FaTimesCircle
+  FaUser, FaPhone, FaEnvelope, FaCheckCircle, FaTimesCircle, FaInbox
 } from 'react-icons/fa';
 import './ProviderDashboard.css';
 
@@ -34,14 +34,25 @@ export default function ProviderDashboard() {
       return;
     }
     setLoading(true);
-    // Providers only see bookings directly assigned to them
-    const { data, error } = await supabase
-      .from('bookings')
-      .select('*')
-      .eq('provider_id', user.id)
-      .order('created_at', { ascending: false });
-    if (!error) setJobs(data || []);
-    setLoading(false);
+    try {
+      // Providers only see bookings directly assigned to them
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('provider_id', user.id)
+        .order('created_at', { ascending: false });
+      if (!error) {
+        setJobs(data || []);
+      } else {
+        console.error('Jobs fetch error:', error);
+        setJobs([]);
+      }
+    } catch (err) {
+      console.error('Exception fetching jobs:', err);
+      setJobs([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const updateJobStatus = async (jobId, status) => {
@@ -254,8 +265,11 @@ export default function ProviderDashboard() {
             <div className="dashboard-loading">Loading service requests...</div>
           ) : filteredJobs.length === 0 ? (
             <div className="dashboard-empty glass-card">
+              <div className="dashboard-empty__icon">
+                <FaInbox />
+              </div>
               <h3>No Requests Found</h3>
-              <p>No service requests match the current filter.</p>
+              <p>{filter === 'all' ? 'You have no service requests yet. Once customers book your service, they will appear here.' : `No service requests with "${filter}" status found.`}</p>
             </div>
           ) : (
             <div className="provider-jobs-grid">

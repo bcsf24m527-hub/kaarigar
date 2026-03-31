@@ -120,11 +120,20 @@ select.form-control {
 }
 
 .providers-loading, .providers-empty {
-  padding: 1rem;
+  padding: 2rem 1.5rem;
   background: var(--surface-light);
   border-radius: var(--border-radius);
   text-align: center;
   color: var(--text-muted);
-  font-style: italic;
   font-size: 0.95rem;
+  border: 2px dashed var(--border-color);
+}
+
+.providers-loading {
+  font-style: italic;
+}
+
+.providers-empty {
+  color: var(--error, #ef4444);
+  font-weight: 500;
 }

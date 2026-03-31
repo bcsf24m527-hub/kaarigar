@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
-import { FaCalendarAlt, FaClock, FaMapMarkerAlt, FaSignOutAlt } from 'react-icons/fa';
+import { FaCalendarAlt, FaClock, FaMapMarkerAlt, FaSignOutAlt, FaRegCalendarTimes } from 'react-icons/fa';
 import './Dashboard.css';
 
 export default function Dashboard() {
@@ -14,15 +14,29 @@ export default function Dashboard() {
   }, [user]);
 
   const fetchBookings = async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    const { data, error } = await supabase
-      .from('bookings')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-    if (!error) setBookings(data || []);
-    setLoading(false);
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      if (!error) {
+        setBookings(data || []);
+      } else {
+        console.error('Bookings fetch error:', error);
+        setBookings([]);
+      }
+    } catch (err) {
+      console.error('Exception fetching bookings:', err);
+      setBookings([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getStatusClass = (status) => {
@@ -67,8 +81,11 @@ export default function Dashboard() {
             <div className="dashboard-loading">Loading your bookings...</div>
           ) : bookings.length === 0 ? (
             <div className="dashboard-empty glass-card">
+              <div className="dashboard-empty__icon">
+                <FaRegCalendarTimes />
+              </div>
               <h3>No Bookings Yet</h3>
-              <p>You haven't booked any services yet. Start by browsing our services!</p>
+              <p>You haven't booked any services yet. Browse our services and book your first appointment!</p>
               <a href="/services" className="btn btn-primary">Browse Services</a>
             </div>
           ) : (
