@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
 import { FaCalendarCheck } from 'react-icons/fa';
@@ -9,8 +9,9 @@ import './BookService.css';
 export default function BookService() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [form, setForm] = useState({
-    service: '',
+    service: location.state?.service || '',
     user_name: '',
     user_email: user?.email || '',
     user_phone: '',
@@ -33,17 +34,26 @@ export default function BookService() {
         return;
       }
       setFetchingProviders(true);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('role', 'service_provider')
-        .eq('service_type', form.service);
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('role', 'service_provider')
+          .eq('service_type', form.service);
 
-      if (!error) {
-        setProviders(data || []);
+        if (!error) {
+          setProviders(data || []);
+        } else {
+          console.error("Provider fetch error:", error);
+          setProviders([]);
+        }
+      } catch (err) {
+        console.error("Exception fetching providers:", err);
+        setProviders([]);
+      } finally {
+        setFetchingProviders(false);
+        setSelectedProvider(null);
       }
-      setFetchingProviders(false);
-      setSelectedProvider(null);
     };
 
     fetchProviders();

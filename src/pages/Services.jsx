@@ -99,7 +99,7 @@ export default function Services() {
                     <li key={j}>{f}</li>
                   ))}
                 </ul>
-                <Link to="/book" className="btn btn-sm btn-outline service-detail-card__btn">
+                <Link to="/book" state={{ service: service.title }} className="btn btn-sm btn-outline service-detail-card__btn">
                   Book Now <FaArrowRight />
                 </Link>
               </div>

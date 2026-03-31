@@ -84,7 +84,7 @@ export default function Home() {
                 <div className="service-card__icon">{service.icon}</div>
                 <h3>{service.title}</h3>
                 <p>{service.desc}</p>
-                <Link to="/book" className="service-card__link">
+                <Link to="/book" state={{ service: service.title }} className="service-card__link">
                   Book Now <FaArrowRight />
                 </Link>
               </div>
