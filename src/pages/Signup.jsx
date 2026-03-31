@@ -51,7 +51,7 @@ export default function Signup() {
       setError('An account with this email already exists.');
     } else {
       setSuccess('Account created! Check your email for a verification link before logging in.');
-      setTimeout(() => navigate('/login'), 4000);
+      setTimeout(() => navigate('/login'), 1500);
     }
     setLoading(false);
   };
