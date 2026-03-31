@@ -25,24 +25,38 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      if (currentUser) {
-        await fetchProfile(currentUser.id);
-      }
-      setLoading(false);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
         const currentUser = session?.user ?? null;
         setUser(currentUser);
         if (currentUser) {
           await fetchProfile(currentUser.id);
-        } else {
-          setProfile(null);
+        }
+      } catch (err) {
+        console.error("Auth init error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    initializeAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        try {
+          const currentUser = session?.user ?? null;
+          setUser(currentUser);
+          if (currentUser) {
+            await fetchProfile(currentUser.id);
+          } else {
+            setProfile(null);
+          }
+        } catch (err) {
+          console.error("Auth state change error:", err);
+        } finally {
+          setLoading(false);
         }
       }
     );

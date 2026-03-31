@@ -9,31 +9,36 @@ export default function AuthCallback() {
 
   useEffect(() => {
     const handleCallback = async () => {
-      // Supabase handles the token exchange automatically via the URL hash
-      // We just need to check if a profile exists for social login users
-      const { data: { session } } = await supabase.auth.getSession();
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) throw sessionError;
 
-      if (session?.user) {
-        // Check if profile exists
-        const { data: existingProfile } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', session.user.id)
-          .single();
+        if (session?.user) {
+          // Check if profile exists
+          const { data: existingProfile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', session.user.id)
+            .single();
 
-        if (!existingProfile) {
-          // Create profile for social login user (defaults to service_taker)
-          await supabase.from('profiles').insert([{
-            id: session.user.id,
-            email: session.user.email,
-            full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || '',
-            role: 'service_taker',
-          }]);
+          if (!existingProfile) {
+            // Create profile for social login user (defaults to service_taker)
+            await supabase.from('profiles').insert([{
+              id: session.user.id,
+              email: session.user.email,
+              full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || '',
+              role: 'service_taker',
+            }]);
+          }
+          navigate('/dashboard', { replace: true });
+        } else {
+          // Sometimes the URL hash is processed slightly later, give it a tiny delay
+          setTimeout(() => navigate('/login', { replace: true }), 1500);
         }
-
-        navigate('/dashboard');
-      } else {
-        navigate('/login');
+      } catch (err) {
+        console.error("Auth Callback Error:", err);
+        navigate('/login', { replace: true });
       }
     };
 
