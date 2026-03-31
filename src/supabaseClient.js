@@ -12,4 +12,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
 	console.error('Supabase env vars missing:', { supabaseUrl, supabaseAnonKey });
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    storageKey: 'kaarigar-auth-token',
+  }
+});
