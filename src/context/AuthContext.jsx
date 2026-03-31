@@ -24,7 +24,11 @@ export function AuthProvider({ children }) {
   };
 
   useEffect(() => {
-    // Get initial session
+    // Safety fallback: force loading to false after 3 seconds if Supabase hangs
+    const fallbackTimer = setTimeout(() => {
+      setLoading(false);
+    }, 3000);
+
     const initializeAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -36,6 +40,7 @@ export function AuthProvider({ children }) {
       } catch (err) {
         console.error("Auth init error:", err);
       } finally {
+        clearTimeout(fallbackTimer);
         setLoading(false);
       }
     };
@@ -115,9 +120,14 @@ export function AuthProvider({ children }) {
   };
 
   const signOut = async () => {
+    setUser(null);
     setProfile(null);
-    const { error } = await supabase.auth.signOut();
-    return { error };
+    try {
+      const { error } = await supabase.auth.signOut();
+      return { error };
+    } catch (e) {
+      return { error: e };
+    }
   };
 
   const role = profile?.role || null;
