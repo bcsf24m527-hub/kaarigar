@@ -16,11 +16,13 @@ export default function AuthCallback() {
 
         if (session?.user) {
           // Check if profile exists
-          const { data: existingProfile } = await supabase
+          const { data: existingProfile, error: profileError } = await supabase
             .from('profiles')
             .select('id')
             .eq('id', session.user.id)
-            .single();
+            .maybeSingle();
+
+          if (profileError) console.warn('Profile lookup error:', profileError);
 
           if (!existingProfile) {
             // Create profile for social login user (defaults to service_taker)

@@ -15,7 +15,7 @@ export function AuthProvider({ children }) {
       .from('profiles')
       .select('*')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
     if (!error && data) {
       setProfile(data);
     } else {
@@ -70,20 +70,39 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signUp = async (email, password, role = 'service_taker', fullName = '', serviceType = null) => {
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (!error && data?.user) {
-      // Create profile with role and service type
-      const { error: profileError } = await supabase.from('profiles').insert([{
-        id: data.user.id,
-        email,
-        full_name: fullName,
-        role,
-        service_type: serviceType,
-      }]);
+    // Pass profile data as metadata so the DB trigger can create the profile
+    // even before email confirmation (bypasses RLS)
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          role,
+          service_type: serviceType,
+        },
+      },
+    });
+
+    if (error) return { data, error };
+
+    // If email confirmation is disabled and a session exists, try client-side upsert as backup
+    if (data?.session && data?.user) {
+      const { error: profileError } = await supabase.from('profiles').upsert(
+        [{
+          id: data.user.id,
+          email,
+          full_name: fullName,
+          role,
+          service_type: serviceType,
+        }],
+        { onConflict: 'id' }
+      );
       if (profileError) {
-        console.error('Error creating profile:', profileError.message);
+        console.error('Profile upsert error (non-fatal, trigger should handle):', profileError);
       }
     }
+
     return { data, error };
   };
 
