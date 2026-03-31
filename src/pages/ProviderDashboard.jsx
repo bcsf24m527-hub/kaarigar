@@ -19,41 +19,59 @@ export default function ProviderDashboard() {
   const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const fetchJobs = async () => {
+      if (!user || !profile?.service_type) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+
+      const timeout = setTimeout(() => {
+        if (!cancelled) {
+          console.warn('Jobs fetch timed out after 10s');
+          setLoading(false);
+        }
+      }, 10000);
+
+      try {
+        const { data, error } = await supabase
+          .from('bookings')
+          .select('*')
+          .eq('provider_id', user.id)
+          .order('created_at', { ascending: false });
+
+        clearTimeout(timeout);
+        if (cancelled) return;
+
+        if (!error) {
+          setJobs(data || []);
+        } else {
+          console.error('Jobs fetch error:', error);
+          setJobs([]);
+        }
+      } catch (err) {
+        clearTimeout(timeout);
+        if (cancelled) return;
+        console.error('Exception fetching jobs:', err);
+        setJobs([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
     fetchJobs();
+
     if (profile?.hourly_rate) {
       setHourlyRate(profile.hourly_rate);
     }
     if (profile?.avatar_url) {
       setAvatarUrl(profile.avatar_url);
     }
-  }, [user, profile]);
 
-  const fetchJobs = async () => {
-    if (!user || !profile?.service_type) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    try {
-      // Providers only see bookings directly assigned to them
-      const { data, error } = await supabase
-        .from('bookings')
-        .select('*')
-        .eq('provider_id', user.id)
-        .order('created_at', { ascending: false });
-      if (!error) {
-        setJobs(data || []);
-      } else {
-        console.error('Jobs fetch error:', error);
-        setJobs([]);
-      }
-    } catch (err) {
-      console.error('Exception fetching jobs:', err);
-      setJobs([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    return () => { cancelled = true; };
+  }, [user, profile]);
 
   const updateJobStatus = async (jobId, status) => {
     const { error } = await supabase

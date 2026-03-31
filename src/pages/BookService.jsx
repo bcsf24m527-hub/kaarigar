@@ -27,6 +27,8 @@ export default function BookService() {
   const [fetchingProviders, setFetchingProviders] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchProviders = async () => {
       if (!form.service) {
         setProviders([]);
@@ -34,12 +36,24 @@ export default function BookService() {
         return;
       }
       setFetchingProviders(true);
+
+      const timeout = setTimeout(() => {
+        if (!cancelled) {
+          console.warn('Providers fetch timed out after 10s');
+          setFetchingProviders(false);
+          setProviders([]);
+        }
+      }, 10000);
+
       try {
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('role', 'service_provider')
           .eq('service_type', form.service);
+
+        clearTimeout(timeout);
+        if (cancelled) return;
 
         if (!error) {
           setProviders(data || []);
@@ -48,15 +62,21 @@ export default function BookService() {
           setProviders([]);
         }
       } catch (err) {
+        clearTimeout(timeout);
+        if (cancelled) return;
         console.error("Exception fetching providers:", err);
         setProviders([]);
       } finally {
-        setFetchingProviders(false);
-        setSelectedProvider(null);
+        if (!cancelled) {
+          setFetchingProviders(false);
+          setSelectedProvider(null);
+        }
       }
     };
 
     fetchProviders();
+
+    return () => { cancelled = true; };
   }, [form.service]);
 
   const handleChange = (e) => {

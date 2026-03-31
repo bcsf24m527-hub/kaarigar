@@ -10,34 +10,53 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchBookings();
-  }, [user]);
+    let cancelled = false;
 
-  const fetchBookings = async () => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('bookings')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      if (!error) {
-        setBookings(data || []);
-      } else {
-        console.error('Bookings fetch error:', error);
-        setBookings([]);
+    const fetchBookings = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
       }
-    } catch (err) {
-      console.error('Exception fetching bookings:', err);
-      setBookings([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+      setLoading(true);
+
+      // Timeout safeguard: force loading off after 10 seconds
+      const timeout = setTimeout(() => {
+        if (!cancelled) {
+          console.warn('Bookings fetch timed out after 10s');
+          setLoading(false);
+        }
+      }, 10000);
+
+      try {
+        const { data, error } = await supabase
+          .from('bookings')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        clearTimeout(timeout);
+        if (cancelled) return;
+
+        if (!error) {
+          setBookings(data || []);
+        } else {
+          console.error('Bookings fetch error:', error);
+          setBookings([]);
+        }
+      } catch (err) {
+        clearTimeout(timeout);
+        if (cancelled) return;
+        console.error('Exception fetching bookings:', err);
+        setBookings([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    fetchBookings();
+
+    return () => { cancelled = true; };
+  }, [user]);
 
   const getStatusClass = (status) => {
     switch (status?.toLowerCase()) {
