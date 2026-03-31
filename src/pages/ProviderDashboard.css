@@ -32,9 +32,33 @@
 /* Filters */
 .provider-filters {
   display: flex;
-  gap: 8px;
-  margin-bottom: 28px;
+  gap: 1rem;
+  margin-bottom: 2rem;
   flex-wrap: wrap;
+}
+
+.provider-settings {
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  background: var(--surface-light);
+  border: 1px solid var(--border-color);
+}
+
+.provider-settings h3 {
+  margin-bottom: 1rem;
+  color: var(--text-color);
+  font-size: 1.25rem;
+}
+
+.row-align {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+}
+
+.row-align > div {
+  flex: 1;
+  max-width: 300px;
 }
 
 .provider-filter {
@@ -137,6 +161,41 @@
 
 .provider-job-card__assigned strong {
   color: var(--text-primary);
+}
+
+.provider-settings__grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.avatar-upload-container {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.avatar-preview {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border-color);
+}
+
+.avatar-preview--empty {
+  background: var(--surface-bg);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+
+.dashboard-user__avatar--img {
+  object-fit: cover;
+  background: none !important;
+  border: 2px solid var(--border-color);
 }
 
 @media (max-width: 768px) {

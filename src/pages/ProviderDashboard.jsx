@@ -13,9 +13,19 @@ export default function ProviderDashboard() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [toast, setToast] = useState(null);
+  const [hourlyRate, setHourlyRate] = useState('');
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     fetchJobs();
+    if (profile?.hourly_rate) {
+      setHourlyRate(profile.hourly_rate);
+    }
+    if (profile?.avatar_url) {
+      setAvatarUrl(profile.avatar_url);
+    }
   }, [user, profile]);
 
   const fetchJobs = async () => {
@@ -24,11 +34,11 @@ export default function ProviderDashboard() {
       return;
     }
     setLoading(true);
-    // Providers see bookings matching their service expertise
+    // Providers only see bookings directly assigned to them
     const { data, error } = await supabase
       .from('bookings')
       .select('*')
-      .eq('service', profile.service_type)
+      .eq('provider_id', user.id)
       .order('created_at', { ascending: false });
     if (!error) setJobs(data || []);
     setLoading(false);
@@ -37,13 +47,62 @@ export default function ProviderDashboard() {
   const updateJobStatus = async (jobId, status) => {
     const { error } = await supabase
       .from('bookings')
-      .update({ status, provider_id: user.id, provider_name: profile?.full_name || user.email })
+      .update({ status })
       .eq('id', jobId);
     if (!error) {
       showToast('success', `Job ${status.toLowerCase()} successfully!`);
       fetchJobs();
     } else {
       showToast('error', 'Failed to update job status.');
+    }
+  };
+
+  const saveProfile = async () => {
+    setIsUpdatingProfile(true);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ hourly_rate: Number(hourlyRate) })
+      .eq('id', user.id);
+    if (!error) {
+      showToast('success', 'Profile updated successfully!');
+    } else {
+      showToast('error', 'Failed to update profile.');
+    }
+    setIsUpdatingProfile(false);
+  };
+
+  const uploadAvatar = async (event) => {
+    try {
+      if (!event.target.files || event.target.files.length === 0) return;
+      setIsUploading(true);
+      const file = event.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+      
+      setAvatarUrl(publicUrl);
+      showToast('success', 'Avatar updated successfully!');
+    } catch (error) {
+      showToast('error', 'Error uploading avatar!');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -90,9 +149,13 @@ export default function ProviderDashboard() {
         <div className="container">
           <div className="dashboard-header">
             <div className="dashboard-user">
-              <div className="dashboard-user__avatar dashboard-user__avatar--provider">
-                {profile?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
-              </div>
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar" className="dashboard-user__avatar dashboard-user__avatar--provider dashboard-user__avatar--img" />
+              ) : (
+                <div className="dashboard-user__avatar dashboard-user__avatar--provider">
+                  {profile?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
+                </div>
+              )}
               <div>
                 <p className="dashboard-user__email">{profile?.full_name || user?.email}</p>
                 <span className="dashboard-user__label">Service Provider</span>
@@ -122,8 +185,7 @@ export default function ProviderDashboard() {
           {/* Filters */}
           <div className="provider-filters">
             {[
-              { key: 'all', label: 'All Requests' },
-              { key: 'my_jobs', label: 'My Jobs' },
+              { key: 'all', label: 'All Jobs' },
               { key: 'pending', label: 'Pending' },
               { key: 'confirmed', label: 'Confirmed' },
               { key: 'completed', label: 'Completed' },
@@ -136,6 +198,56 @@ export default function ProviderDashboard() {
                 {f.label}
               </button>
             ))}
+          </div>
+
+          <div className="provider-settings glass-card">
+            <h3>Profile Settings</h3>
+            <div className="provider-settings__grid">
+              <div className="form-group">
+                <label>Profile Picture</label>
+                <div className="avatar-upload-container">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="Avatar" className="avatar-preview" />
+                  ) : (
+                    <div className="avatar-preview avatar-preview--empty">
+                      <FaUser />
+                    </div>
+                  )}
+                  <label className="btn btn-sm btn-secondary" htmlFor="avatar-upload">
+                    {isUploading ? 'Uploading...' : 'Upload Image'}
+                  </label>
+                  <input
+                    id="avatar-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={uploadAvatar}
+                    disabled={isUploading}
+                    style={{ position: 'absolute', visibility: 'hidden' }}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group row-align">
+                <div>
+                  <label htmlFor="hourlyRate">Hourly Rate (Rs)</label>
+                  <input
+                    id="hourlyRate"
+                    type="number"
+                    className="form-control"
+                    placeholder="e.g. 500"
+                    value={hourlyRate}
+                    onChange={(e) => setHourlyRate(e.target.value)}
+                  />
+                </div>
+                <button 
+                  className="btn btn-primary btn-sm"
+                  onClick={saveProfile}
+                  disabled={isUpdatingProfile}
+                >
+                  {isUpdatingProfile ? 'Saving...' : 'Save Rate'}
+                </button>
+              </div>
+            </div>
           </div>
 
           {loading ? (
@@ -201,7 +313,7 @@ export default function ProviderDashboard() {
                     </div>
                   )}
 
-                  {job.status === 'Confirmed' && job.provider_id === user.id && (
+                  {job.status === 'Confirmed' && (
                     <div className="provider-job-card__actions">
                       <button
                         className="btn btn-sm btn-primary"
@@ -209,12 +321,6 @@ export default function ProviderDashboard() {
                       >
                         <FaCheckCircle /> Mark Completed
                       </button>
-                    </div>
-                  )}
-
-                  {job.provider_name && job.status !== 'Pending' && (
-                    <div className="provider-job-card__assigned">
-                      Assigned to: <strong>{job.provider_name}</strong>
                     </div>
                   )}
                 </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
@@ -21,6 +21,33 @@ export default function BookService() {
   });
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
+  const [providers, setProviders] = useState([]);
+  const [selectedProvider, setSelectedProvider] = useState(null);
+  const [fetchingProviders, setFetchingProviders] = useState(false);
+
+  useEffect(() => {
+    const fetchProviders = async () => {
+      if (!form.service) {
+        setProviders([]);
+        setSelectedProvider(null);
+        return;
+      }
+      setFetchingProviders(true);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'service_provider')
+        .eq('service_type', form.service);
+
+      if (!error) {
+        setProviders(data || []);
+      }
+      setFetchingProviders(false);
+      setSelectedProvider(null);
+    };
+
+    fetchProviders();
+  }, [form.service]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -33,11 +60,17 @@ export default function BookService() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!selectedProvider) {
+      showToast('error', 'Please select a service provider first.');
+      return;
+    }
     setLoading(true);
     try {
       const { error } = await supabase.from('bookings').insert([{
         ...form,
         user_id: user.id,
+        provider_id: selectedProvider.id,
+        provider_name: selectedProvider.full_name || selectedProvider.email,
         status: 'Pending',
       }]);
       if (error) throw error;
@@ -85,6 +118,42 @@ export default function BookService() {
                   ))}
                 </select>
               </div>
+
+              {form.service && (
+                <div className="form-group book-form__full">
+                  <label>Available Providers *</label>
+                  {fetchingProviders ? (
+                    <p className="providers-loading">Finding the best professionals for you...</p>
+                  ) : providers.length === 0 ? (
+                    <p className="providers-empty">No providers currently available for this service. Please try another.</p>
+                  ) : (
+                    <div className="providers-grid">
+                      {providers.map(p => (
+                        <div 
+                          key={p.id}
+                          className={`provider-card ${selectedProvider?.id === p.id ? 'active' : ''}`}
+                          onClick={() => setSelectedProvider(p)}
+                          role="button"
+                          tabIndex={0}
+                        >
+                          <div className={`provider-card__avatar ${p.avatar_url ? 'provider-card__avatar--has-img' : ''}`}>
+                            {p.avatar_url ? (
+                              <img src={p.avatar_url} alt={p.full_name || 'Provider'} className="provider-card__avatar-img" />
+                            ) : (
+                              p.full_name?.charAt(0).toUpperCase() || p.email?.charAt(0).toUpperCase()
+                            )}
+                          </div>
+                          <div className="provider-card__info">
+                            <h4>{p.full_name || p.email}</h4>
+                            <span className="provider-rate">Rs {p.hourly_rate || 0} / hr</span>
+                            {p.bio && <p className="provider-bio">{p.bio}</p>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="form-group">
                 <label htmlFor="user_name">Full Name *</label>
