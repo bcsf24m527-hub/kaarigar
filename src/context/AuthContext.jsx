@@ -11,14 +11,29 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId) => {
-    const { data, error } = await supabase
+    console.log("fetchProfile: starting to fetch profile for user:", userId);
+    
+    // Add timeout specifically for the profile fetch in case RLS or DB hangs
+    const fetchPromise = supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .maybeSingle();
-    if (!error && data) {
-      setProfile(data);
-    } else {
+
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Profile fetch timed out after 10s')), 10000)
+    );
+
+    try {
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+      console.log("fetchProfile: completed. Error:", error);
+      if (!error && data) {
+        setProfile(data);
+      } else {
+        setProfile(null);
+      }
+    } catch (err) {
+      console.error("fetchProfile: exception caught:", err);
       setProfile(null);
     }
   };
@@ -107,9 +122,13 @@ export function AuthProvider({ children }) {
   };
 
   const signIn = async (email, password) => {
+    console.log("signIn: calling signInWithPassword...");
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    console.log("signIn: signInWithPassword returned. Error:", error);
     if (!error && data?.user) {
+      console.log("signIn: calling fetchProfile...");
       await fetchProfile(data.user.id);
+      console.log("signIn: fetchProfile returned.");
     }
     return { data, error };
   };
