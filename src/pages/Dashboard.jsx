@@ -11,6 +11,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     let cancelled = false;
+    let subscription = null;
 
     const fetchBookings = async () => {
       if (!user) {
@@ -55,7 +56,29 @@ export default function Dashboard() {
 
     fetchBookings();
 
-    return () => { cancelled = true; };
+    if (user) {
+      subscription = supabase
+        .channel('dashboard-bookings')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'bookings', filter: `user_id=eq.${user.id}` },
+          (payload) => {
+            if (payload.eventType === 'INSERT') {
+              setBookings((prev) => [payload.new, ...prev]);
+            } else if (payload.eventType === 'UPDATE') {
+              setBookings((prev) => prev.map(b => b.id === payload.new.id ? payload.new : b));
+            } else if (payload.eventType === 'DELETE') {
+              setBookings((prev) => prev.filter(b => b.id !== payload.old.id));
+            }
+          }
+        )
+        .subscribe();
+    }
+
+    return () => { 
+      cancelled = true; 
+      if (subscription) supabase.removeChannel(subscription);
+    };
   }, [user]);
 
   const getStatusClass = (status) => {

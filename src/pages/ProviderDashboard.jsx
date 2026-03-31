@@ -20,6 +20,7 @@ export default function ProviderDashboard() {
 
   useEffect(() => {
     let cancelled = false;
+    let subscription = null;
 
     const fetchJobs = async () => {
       if (!user || !profile?.service_type) {
@@ -70,7 +71,29 @@ export default function ProviderDashboard() {
       setAvatarUrl(profile.avatar_url);
     }
 
-    return () => { cancelled = true; };
+    if (user && profile?.service_type) {
+      subscription = supabase
+        .channel('provider-bookings')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'bookings', filter: `provider_id=eq.${user.id}` },
+          (payload) => {
+            if (payload.eventType === 'INSERT') {
+              setJobs((prev) => [payload.new, ...prev]);
+            } else if (payload.eventType === 'UPDATE') {
+              setJobs((prev) => prev.map(job => job.id === payload.new.id ? payload.new : job));
+            } else if (payload.eventType === 'DELETE') {
+              setJobs((prev) => prev.filter(job => job.id !== payload.old.id));
+            }
+          }
+        )
+        .subscribe();
+    }
+
+    return () => { 
+      cancelled = true; 
+      if (subscription) supabase.removeChannel(subscription);
+    };
   }, [user, profile]);
 
   const updateJobStatus = async (jobId, status) => {
