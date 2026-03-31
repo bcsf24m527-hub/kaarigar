@@ -103,7 +103,8 @@ export default function ProviderDashboard() {
       .eq('id', jobId);
     if (!error) {
       showToast('success', `Job ${status.toLowerCase()} successfully!`);
-      fetchJobs();
+      // Update local state directly so UI reflects change immediately
+      setJobs(prev => prev.map(job => job.id === jobId ? { ...job, status } : job));
     } else {
       showToast('error', 'Failed to update job status.');
     }
