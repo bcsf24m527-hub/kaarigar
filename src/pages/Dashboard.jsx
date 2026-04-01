@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
-import { FaCalendarAlt, FaClock, FaMapMarkerAlt, FaSignOutAlt, FaRegCalendarTimes } from 'react-icons/fa';
+import { FaCalendarAlt, FaClock, FaMapMarkerAlt, FaSignOutAlt, FaRegCalendarTimes, FaTimes, FaUser, FaMoneyBillWave } from 'react-icons/fa';
 import './Dashboard.css';
 
 export default function Dashboard() {
   const { user, signOut } = useAuth();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [providerRate, setProviderRate] = useState(null);
+  const [loadingRate, setLoadingRate] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -90,6 +93,33 @@ export default function Dashboard() {
     }
   };
 
+  const handleBookingClick = async (booking) => {
+    setSelectedBooking(booking);
+    setLoadingRate(true);
+    setProviderRate(null);
+    try {
+      if (booking.provider_id) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('hourly_rate')
+          .eq('id', booking.provider_id)
+          .single();
+          
+        if (!error && data) {
+          setProviderRate(data.hourly_rate);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching rate:', err);
+    } finally {
+      setLoadingRate(false);
+    }
+  };
+
+  const closeModal = () => {
+    setSelectedBooking(null);
+  };
+
   return (
     <div className="dashboard-page">
       <section className="page-hero">
@@ -133,9 +163,13 @@ export default function Dashboard() {
           ) : (
             <div className="bookings-grid">
               {bookings.map((booking) => (
-                <div key={booking.id} className="booking-card glass-card">
+                <div 
+                  key={booking.id} 
+                  className="booking-card glass-card"
+                  onClick={() => handleBookingClick(booking)}
+                >
                   <div className="booking-card__header">
-                    <h4>{booking.service}</h4>
+                    <h4>{booking.service || 'Service Booking'}</h4>
                     <span className={`booking-card__status ${getStatusClass(booking.status)}`}>
                       {booking.status}
                     </span>
@@ -154,15 +188,74 @@ export default function Dashboard() {
                       <span>{booking.address || 'N/A'}</span>
                     </div>
                   </div>
-                  {booking.notes && (
-                    <p className="booking-card__notes">{booking.notes}</p>
-                  )}
+                  <div className="booking-card__hint">Click to view full details</div>
                 </div>
               ))}
             </div>
           )}
         </div>
       </section>
+
+      {/* Booking Details Modal */}
+      {selectedBooking && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal-content glass-card" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={closeModal}>
+              <FaTimes />
+            </button>
+            <h3 className="modal-title">Booking Details</h3>
+            
+            <div className="modal-details">
+              <div className="modal-detail-row">
+                <span className="modal-detail-label">Service</span>
+                <span className="modal-detail-value">{selectedBooking.service || 'N/A'}</span>
+              </div>
+              
+              <div className="modal-detail-row">
+                <span className="modal-detail-label">Status</span>
+                <span className={`booking-card__status ${getStatusClass(selectedBooking.status)}`}>
+                  {selectedBooking.status || 'Pending'}
+                </span>
+              </div>
+
+              <div className="modal-detail-row">
+                <span className="modal-detail-label">Provider</span>
+                <span className="modal-detail-value d-flex-align">
+                  <FaUser style={{marginRight: '6px', color: 'var(--primary)'}}/> 
+                  {selectedBooking.provider_name || 'N/A'}
+                </span>
+              </div>
+
+              <div className="modal-detail-row">
+                <span className="modal-detail-label">Rate</span>
+                <span className="modal-detail-value d-flex-align">
+                  <FaMoneyBillWave style={{marginRight: '6px', color: 'var(--primary)'}}/> 
+                  {loadingRate ? 'Loading...' : providerRate ? `Rs ${providerRate} / hr` : 'Not specified'}
+                </span>
+              </div>
+
+              <div className="modal-detail-row">
+                <span className="modal-detail-label">Date & Time</span>
+                <span className="modal-detail-value">
+                  {selectedBooking.date || 'N/A'} at {selectedBooking.time || 'N/A'}
+                </span>
+              </div>
+
+              <div className="modal-detail-row">
+                <span className="modal-detail-label">Location</span>
+                <span className="modal-detail-value">{selectedBooking.address || 'N/A'}</span>
+              </div>
+
+              {selectedBooking.notes && (
+                <div className="modal-detail-column">
+                  <span className="modal-detail-label">Notes</span>
+                  <p className="modal-detail-text">{selectedBooking.notes}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
